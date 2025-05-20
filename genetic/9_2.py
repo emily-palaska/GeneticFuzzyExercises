@@ -50,17 +50,7 @@ def main():
     bests, means = run_genetic_algorithm(P_delta)
 
     generations = np.arange(len(bests))
-    plt.figure(figsize=(10, 6))
-    plt.plot(generations, bests, label="Best fitness", color="green")
-    plt.plot(generations, means, label="Mean fitness", color="blue")
-    plt.xlabel("Generation")
-    plt.ylabel("Fitness Value")
-    plt.title("Genetic Algorithm Progress Over Generations")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig("genetic_progress.png")
-    plt.show()
+
 
 if __name__ == "__main__":
     main()

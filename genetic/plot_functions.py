@@ -18,3 +18,15 @@ def p_delta_histograms(results: list, p_deltas: list, path: str):
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(path)
+
+def generation_progress(generations, bests, means, path: str):
+    plt.figure(figsize=(10, 6))
+    plt.plot(generations, bests, label="Best fitness", color="green")
+    plt.plot(generations, means, label="Mean fitness", color="blue")
+    plt.xlabel("Generation")
+    plt.ylabel("Fitness Value")
+    plt.title("Genetic Algorithm Progress Over Generations")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(path)

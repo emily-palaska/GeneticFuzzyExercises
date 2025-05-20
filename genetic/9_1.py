@@ -4,7 +4,7 @@ from plot_functions import p_delta_histograms
 
 def main():
     runs, p_deltas = 20, [0.7, 0.0]
-    P_mu, n, l = 0.001, 100, 100
+    P_mu, n, l = 0.001, 1000, 100
     results = []
 
     for P_delta in p_deltas:
