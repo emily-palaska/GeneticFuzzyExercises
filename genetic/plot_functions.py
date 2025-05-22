@@ -93,3 +93,21 @@ def multi_generation_progress(bests, means, labels, path: str):
     plt.tight_layout()
     plt.savefig(path)
     plt.close()
+
+def schema_count(counts: list, labels: list, path: str):
+    generations = list(range(len(counts)))
+    plt.figure(figsize=(12, 8))
+
+    for s in range(len(counts[0])):
+        s_counts= [c[s] for c in counts]
+        label = labels[s]
+        plt.plot(generations, s_counts, label=label)
+
+    plt.xlabel("Generation")
+    plt.ylabel("Appearance Count")
+    plt.title("Genetic Algorithm Schema Appearance Count")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(path)
+    plt.close()

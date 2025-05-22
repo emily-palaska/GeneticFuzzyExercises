@@ -1,56 +1,45 @@
 import torch
+from genetic.utils import mutate, roulette_wheel, one_point_crossover
+
 def linear_fitness(population: torch.Tensor):
     return population.sum(dim=1)
 
 def binary_fitness(population: torch.Tensor):
     batch_size, chromosome_length = population.shape
-
-    # Use int64 if chromosome length is safe
-    if chromosome_length <= 63:
-        powers = 2 ** torch.arange(chromosome_length - 1, -1, -1, device=population.device, dtype=torch.int64)
-        fitness = (population.to(torch.int64) * powers).sum(dim=1)
-        return fitness.to(torch.float32)
-
-    # For long chromosomes: process in chunks to avoid overflow
-    chunk_size = 32
-    fitness = torch.zeros(batch_size, dtype=torch.float64, device=population.device)
+    chunk_size, device = 32, population.device
+    fitness = torch.zeros(batch_size, dtype=torch.float64, device=device)
 
     for i in range(0, chromosome_length, chunk_size):
         end = min(i + chunk_size, chromosome_length)
         chunk = population[:, i:end].to(torch.float64)
-        power_range = torch.arange(end - 1, i - 1, -1, device=population.device, dtype=torch.float64)
+        power_range = torch.arange(end - 1, i - 1, -1, device=device, dtype=torch.float64)
         powers = 2 ** power_range
         fitness += (chunk * powers).sum(dim=1)
 
     return fitness.to(torch.float32)
 
-def mutate(population: torch.Tensor, P_mu: float):
-    mutation_mask = torch.rand_like(population, dtype=torch.float32) < P_mu
-    return population ^ mutation_mask.to(torch.bool)
-
-def roulette_wheel(population: torch.Tensor, fitnesses: torch.Tensor):
-    probabilities = fitnesses / torch.sum(fitnesses)
-    indices = torch.multinomial(probabilities, num_samples=2, replacement=True)
-    return population[indices[0]], population[indices[1]]
-
-def one_point_crossover(parents: torch.Tensor, P_delta: float):
-    n, _, gene_length = parents.shape
-    do_crossover = torch.rand(n) < P_delta
-    points = torch.randint(1, gene_length, (n,))
-    child1, child2 = parents[:, 0, :].clone(), parents[:, 1, :].clone()
-
-    for i in range(n):
-        if do_crossover[i]:
-            p = points[i]
-            child1[i, p:], child2[i, p:] = parents[i, 1, p:], parents[i, 0, p:]
-
-    return torch.cat([child1, child2], dim=0)
-
 def ones(fitnesses: torch.Tensor, target=None):
     return torch.any(fitnesses == target).item()
 
-def best(fitnesses: torch.Tensor, target=None):
+def best(fitnesses: torch.Tensor):
     return torch.argmax(fitnesses).item()
+
+def schema(population: torch.Tensor, schemas: list):
+    batch_size, chrom_len = population.shape
+    counts, device = [], population.device
+
+    for s in schemas:
+        assert len(s) == chrom_len, f"Schema length must match chromosome length: \n{s}"
+
+        mask = torch.tensor([c != '*' for c in s], dtype=torch.bool, device=device)
+        target = torch.tensor(
+            [int(c) if c != '*' else 0 for c in s], dtype=torch.uint8, device=device
+        )
+        selected, expected = population[:, mask], target[mask]
+        matches = (selected == expected).all(dim=1)
+        counts.append(matches.sum().item())
+
+    return counts
 
 class GeneticAlgorithm:
     def __init__(self, fitness=linear_fitness, selection=roulette_wheel, target=ones,
@@ -62,9 +51,9 @@ class GeneticAlgorithm:
         self.target = target
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    def run(self, generations=1e3):
+    def run(self, generations=100, schemas=None):
         population = torch.randint(0, 2, (self.n, self.l), dtype=torch.int32, device=self.device)
-        best_fitness, mean_fitness = [], []
+        best_fitness, mean_fitness, counts = [], [], []
 
         for generation in range(int(generations)):
             fitnesses = self.fitness(population)
@@ -73,9 +62,10 @@ class GeneticAlgorithm:
                 return generation
             elif self.target==best:
                 ind = self.target(fitnesses)
-
                 best_fitness.append(fitnesses[ind].cpu())
                 mean_fitness.append(fitnesses.mean().cpu().item())
+            elif self.target == schema:
+                counts.append(self.target(population, schemas))
 
             probabilities = fitnesses / torch.sum(fitnesses)
             parent_indices = torch.multinomial(probabilities, num_samples=2 * self.n, replacement=True)
@@ -87,4 +77,5 @@ class GeneticAlgorithm:
 
         if self.target==ones: return generations
         if self.target==best: return best_fitness, mean_fitness
+        if self.target==schema: return counts
 
