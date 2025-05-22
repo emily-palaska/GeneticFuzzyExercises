@@ -10,7 +10,7 @@ def main():
         ga = GeneticAlgorithm(P_delta=P_delta, fitness=linear_fitness, P_mu=P_mu, n=n, l=l)
         generations = []
         for r in range(runs):
-            generations.append(ga.run(max_generations=1e4))
+            generations.append(ga.run(generations=1e4))
             print(f'\tRun {r}: {generations[-1]}')
         results.append(generations)
         print(f"Average generation for P_delta = {P_delta}: {np.mean(generations):.2f}")
