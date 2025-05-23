@@ -5,18 +5,12 @@ def linear_fitness(population: torch.Tensor):
     return population.sum(dim=1)
 
 def binary_fitness(population: torch.Tensor):
-    batch_size, chromosome_length = population.shape
-    chunk_size, device = 32, population.device
-    fitness = torch.zeros(batch_size, dtype=torch.float64, device=device)
+    batch_size, l = population.shape
+    device = population.device
 
-    for i in range(0, chromosome_length, chunk_size):
-        end = min(i + chunk_size, chromosome_length)
-        chunk = population[:, i:end].to(torch.float64)
-        power_range = torch.arange(end - 1, i - 1, -1, device=device, dtype=torch.float64)
-        powers = 2 ** power_range
-        fitness += (chunk * powers).sum(dim=1)
-
-    return fitness.to(torch.float32)
+    power_range = torch.arange(l - 1, -1, -1, device=device, dtype=torch.float64)
+    fitness = (population * 2 ** power_range).sum(dim=1)
+    return fitness
 
 def ones(fitnesses: torch.Tensor, target=None):
     return torch.any(fitnesses == target).item()
