@@ -1,5 +1,5 @@
-from genetic.genetic_algorithm import GeneticAlgorithm, linear_fitness, binary_fitness, schema
-from genetic.plot_functions import schema_count
+from genetic.abstraction import GeneticAlgorithm, linear_fitness, binary_fitness, schema
+from genetic.plotting import schema_count
 
 def main():
     schemas = [

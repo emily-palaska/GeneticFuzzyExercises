@@ -1,5 +1,5 @@
-from genetic_algorithm import GeneticAlgorithm, binary_fitness, best
-from plot_functions import generation_progress, multi_generation_progress
+from abstraction import GeneticAlgorithm, binary_fitness, best
+from plotting import generation_progress, multi_generation_progress
 
 def main():
     genetic = GeneticAlgorithm(fitness=binary_fitness, target=best)

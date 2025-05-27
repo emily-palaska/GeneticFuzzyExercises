@@ -1,6 +1,6 @@
 import numpy as np
-from genetic_algorithm import GeneticAlgorithm, linear_fitness
-from plot_functions import p_delta_histograms, p_delta_line
+from abstraction import GeneticAlgorithm, linear_fitness
+from plotting import p_delta_histograms, p_delta_line
 def main():
     runs, p_deltas = 20, [0.1*i for i in range(11)]
     P_mu, n, l = 0.001, 100, 20

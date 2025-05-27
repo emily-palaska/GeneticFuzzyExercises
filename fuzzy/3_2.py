@@ -1,90 +1,54 @@
-import torch
-import matplotlib.pyplot as plt
+from fuzzy.operations import plot_fuzzy, fuzzy_div, fuzzy_sub, fuzzy_mult
+
+# Membership functions
+def mu_A(x):
+    if x <= 8: return 0
+    if 8 < x < 18: return max(0, (1/10) * x - 8/10)
+    if 18 <= x <= 32: return max(0, -(1/14) * x + 32/14)
+    return 0
+
+def mu_B(x):
+    if x <= -3: return 0
+    if -3 < x <= 6: return max(0, (1/9) * x - 1/3)
+    if 6 < x <= 24: return max(0, -(1/18) * x + 3/4)
+    return 0
 
 # Domain definition
-x_A = torch.linspace(0, 40, 1000)
-x_B = torch.linspace(-10, 30, 1000)
+def domain(min_val, max_val, step):
+    return [min_val + i*step for i in range(int((max_val - min_val)/step) + 1)]
 
-# Membership function for A
-def mu_A(x):
-    return torch.where(
-        x <= 8, 0.0,
-        torch.where(
-            x < 18, 0.1 * x - 0.8,
-            torch.where(x <= 32, -1/14 * x + 32/14, 0.0)
-        )
-    )
+x_A = domain(7, 33, 0.05)
+x_B = domain(-4, 25, 0.05)
 
-# Membership function for B
-def mu_B(x):
-    return torch.where(
-        x <= -3, 0.0,
-        torch.where(
-            x <= 6, 1/9 * x - 1/3,
-            torch.where(x <= 24, -1/18 * x + 4/3, 0.0)
-        )
-    )
+# Fuzzy numbers initialization
+A = {x: mu_A(x) for x in x_A}
+B = {x: mu_B(x) for x in x_B}
 
-def fuzzy_operation(xA, muA, xB, muB, op="add"):
-    result = {}
-    for i in range(len(xA)):
-        for j in range(len(xB)):
-            a = xA[i].item()
-            b = xB[j].item()
-            μ = min(muA[i].item(), muB[j].item())
-            if op == "add":
-                z = a + b
-            elif op == "sub":
-                z = a - b
-            elif op == "mul":
-                z = a * b
-            z = round(z, 2)
-            if z in result:
-                result[z] = max(result[z], μ)
-            else:
-                result[z] = μ
-    z_vals = sorted(result.keys())
-    mu_vals = [result[z] for z in z_vals]
-    return torch.tensor(z_vals), torch.tensor(mu_vals)
+# (i) Plot μ_A and μ_B
+plot_fuzzy(A, "Fuzzy Number A", '../results/3_2_a.png')
+plot_fuzzy(B, "Fuzzy Number B", '../results/3_2_b.png')
 
-muA_vals = mu_A(x_A)
-muB_vals = mu_B(x_B)
+# (ii) Fuzzy multiplication using extension principle (max-min convolution)
+def filter_fuzzy(fuzzy_dict):
+    items = list(fuzzy_dict.items())
 
-# Plot μ_A and μ_B
-plt.figure(figsize=(10, 4))
-plt.subplot(1, 2, 1)
-plt.plot(x_A, muA_vals)
-plt.title("Membership Function μ_A(x)")
-plt.grid(True)
+    # Find first and last index where μ ≠ 0
+    start = next((i for i, (_, mu) in enumerate(items) if mu > 0), None)
+    end = next((i for i, (_, mu) in reversed(list(enumerate(items))) if mu > 0), None)
 
-plt.subplot(1, 2, 2)
-plt.plot(x_B, muB_vals)
-plt.title("Membership Function μ_B(x)")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+    if start is None or end is None: return {}
 
-C_x, C_mu = fuzzy_operation(x_A, muA_vals, x_B, muB_vals, op="mul")
-D_x, D_mu = fuzzy_operation(x_A, muA_vals, x_B, muB_vals, op="sub")
-E_x, E_mu = fuzzy_operation(x_A, muA_vals, x_B, muB_vals, op="add")
+    # Keep only entries between first and last non-zero μ
+    filtered_items = items[start:end + 1]
+    return dict(filtered_items)
 
-# Plot all results
-plt.figure(figsize=(12, 4))
-plt.subplot(1, 3, 1)
-plt.plot(C_x, C_mu)
-plt.title("Fuzzy Product: $C = A \\cdot B$")
-plt.grid(True)
+C = filter_fuzzy(fuzzy_mult(A, B))
+plot_fuzzy(C, title="Fuzzy Product C = A * B", filename='../results/3_2_mult.png')
 
-plt.subplot(1, 3, 2)
-plt.plot(D_x, D_mu)
-plt.title("Fuzzy Difference: $D = A - B$")
-plt.grid(True)
+# (iii) Fuzzy subtraction and division using similar principle
+D = filter_fuzzy(fuzzy_sub(A, B))
+plot_fuzzy(D, title="Fuzzy Difference D = A - B", filename='../results/3_2_sub.png')
+E = filter_fuzzy(fuzzy_mult(A, B))
+plot_fuzzy(fuzzy_div(A, B), title="Fuzzy Division E = A / B", filename='../results/3_2_div.png')
 
-plt.subplot(1, 3, 3)
-plt.plot(E_x, E_mu)
-plt.title("Fuzzy Sum: $E = A + B$")
-plt.grid(True)
-
-plt.tight_layout()
-plt.show()
 
